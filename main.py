@@ -132,9 +132,6 @@ sample_data = {
 }
 
 
-# 'data' is now a Python dictionary representing the JSON data.
-
-
 class Partner:
     def __init__(self, firstName, lastName, email, country, availableDates):
         self.firstName = firstName
@@ -145,6 +142,17 @@ class Partner:
 
     def __str__(self):
         return f"Partner(firstName='{self.firstName}', lastName='{self.lastName}', email='{self.email}', country='{self.country}')"
+
+
+class Attendance:
+    def __init__(self, attendeeCount, attendees, name, startDate):
+        self.attendeeCount = attendeeCount
+        self.attendees = attendees
+        self.name = name
+        self.startDate = startDate
+
+    def __str__(self):
+        return f"Attendance(attendeeCount='{self.attendeeCount}', attendees='{self.attendees}', name='{self.name}', startDate='{self.startDate}')"
 
 
 def get_response_sample_data():
@@ -244,6 +252,18 @@ def get_date_counts(partner_list):
     return date_counts
 
 
+def get_partners_email_match_dates(partners, wanted_date):
+    partners_email_with_optimal_date = []
+
+    for partner in partners:
+        available_dates = partner.availableDates
+        for date in available_dates:
+            if datetime.strptime(date, "%Y-%m-%d").date() == wanted_date:
+                partners_email_with_optimal_date.append(partner.email)
+    partners_email_with_optimal_date.sort()
+    return partners_email_with_optimal_date
+
+
 def main():
     # Check if the GET request was successful (status code 200)
     try:
@@ -251,15 +271,20 @@ def main():
         partner_list = get_response_sample_data()
 
         country_map = separate_countries(partner_list)
-        for key, partner_list_country in country_map.items():
+        attendance_list = []
+        for country, partner_list_country in country_map.items():
             optimal_date_country = find_optimal_date_for_country(partner_list_country)
-            print(f"country: {key}, optimal_date_country: {optimal_date_country}")
+            print(f"country: {country}, optimal_date_country: {optimal_date_country}")
+            if optimal_date_country is not None:
+                partner_email_match = get_partners_email_match_dates(partner_list_country, optimal_date_country)
+                num_people = len(partner_email_match)
+                attendance_list.append(Attendance(num_people, partner_email_match, country, optimal_date_country.strftime("%Y-%m-%d")))
+            else:
+                attendance_list.append(Attendance(0, [], country, None))
 
-        # print(f"Country map spain: {country_map['Spain'][0]}")
-        #
-        # date_counts = get_date_counts(partner_list)
-        # optimal_date = find_optimal_date(date_counts)
-        # print(optimal_date)
+        data = {"countries": [vars(attendance) for attendance in attendance_list]}
+        json_data = json.dumps(data, indent=2)
+        print(json_data)
 
     except Exception as e:
         print(f"Error: {e}")
