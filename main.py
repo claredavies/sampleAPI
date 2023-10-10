@@ -1,4 +1,7 @@
 import json
+from collections import Counter
+from datetime import datetime, timedelta
+
 import requests
 
 # Constants for error messages
@@ -8,7 +11,128 @@ JSON_PARSE_ERROR_MSG = "JSON parsing error: {}"
 UNEXPECTED_ERROR_MSG = "An unexpected error occurred: {}"
 
 # Define the URL for the GET and POST APIs
-API_URL = 'https://candidate.hubteam.com/candidateTest/v3/problem/dataset?userKey=0abf770bcf0a391d636e10e45351'
+API__GET_URL = 'https://candidate.hubteam.com/candidateTest/v3/problem/dataset?userKey=0abf770bcf0a391d636e10e45351'
+API_POST_URL = 'https://candidate.hubteam.com/candidateTest/v3/problem/result?userKey=0abf770bcf0a391d636e10e45351'
+
+sample_data = {
+    "partners": [
+        {
+            "firstName": "Darin",
+            "lastName": "Daignault",
+            "email": "ddaignault@hubspotpartners.com",
+            "country": "United States",
+            "availableDates": [
+                "2017-05-03",
+                "2017-05-06"
+            ]
+        },
+        {
+            "firstName": "Crystal",
+            "lastName": "Brenna",
+            "email": "cbrenna@hubspotpartners.com",
+            "country": "Ireland",
+            "availableDates": [
+                "2017-04-27",
+                "2017-04-29",
+                "2017-04-30"
+            ]
+        },
+        {
+            "firstName": "Janyce",
+            "lastName": "Gustison",
+            "email": "jgustison@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-29",
+                "2017-04-30",
+                "2017-05-01"
+            ]
+        },
+        {
+            "firstName": "Tifany",
+            "lastName": "Mozie",
+            "email": "tmozie@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-28",
+                "2017-04-29",
+                "2017-05-01",
+                "2017-05-04"
+            ]
+        },
+        {
+            "firstName": "Temple",
+            "lastName": "Affelt",
+            "email": "taffelt@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-28",
+                "2017-04-29",
+                "2017-05-02",
+                "2017-05-04"
+            ]
+        },
+        {
+            "firstName": "Robyn",
+            "lastName": "Yarwood",
+            "email": "ryarwood@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-29",
+                "2017-04-30",
+                "2017-05-02",
+                "2017-05-03"
+            ]
+        },
+        {
+            "firstName": "Shirlene",
+            "lastName": "Filipponi",
+            "email": "sfilipponi@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-30",
+                "2017-05-01"
+            ]
+        },
+        {
+            "firstName": "Oliver",
+            "lastName": "Majica",
+            "email": "omajica@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-28",
+                "2017-04-29",
+                "2017-05-01",
+                "2017-05-03"
+            ]
+        },
+        {
+            "firstName": "Wilber",
+            "lastName": "Zartman",
+            "email": "wzartman@hubspotpartners.com",
+            "country": "Spain",
+            "availableDates": [
+                "2017-04-29",
+                "2017-04-30",
+                "2017-05-02",
+                "2017-05-03"
+            ]
+        },
+        {
+            "firstName": "Eugena",
+            "lastName": "Auther",
+            "email": "eauther@hubspotpartners.com",
+            "country": "United States",
+            "availableDates": [
+                "2017-05-04",
+                "2017-05-09"
+            ]
+        }
+    ]
+}
+
+
+# 'data' is now a Python dictionary representing the JSON data.
 
 
 class Partner:
@@ -18,6 +142,15 @@ class Partner:
         self.email = email
         self.country = country
         self.availableDates = availableDates
+
+    def __str__(self):
+        return f"Partner(firstName='{self.firstName}', lastName='{self.lastName}', email='{self.email}', country='{self.country}')"
+
+
+def get_response_sample_data():
+    json_data = sample_data
+    post_objects = [Partner(**item) for item in json_data["partners"]]
+    return post_objects
 
 
 def get_response(url):
@@ -58,24 +191,75 @@ def post_response(url, data):
         raise Exception(UNEXPECTED_ERROR_MSG.format(e))
 
 
+def separate_countries(partner_list):
+    country_map = {}
+    print(type(partner_list))
+
+    # Iterate through the list of Partner objects and group them by country
+    for partner in partner_list:
+        print(partner)
+        country = partner.country  # Access the 'country' attribute
+        if country not in country_map:
+            country_map[country] = []
+        country_map[country].append(partner)
+    return country_map
+
+
+def find_optimal_date_for_country(filtered_data):
+    consecutive_dates = []
+    for partner in filtered_data:
+        available_dates = partner.availableDates
+        available_dates = sorted([datetime.strptime(date, "%Y-%m-%d").date() for date in available_dates])
+
+        for i in range(len(available_dates) - 1):
+            date1 = available_dates[i]
+            date2 = available_dates[i + 1]
+
+            if date2 == date1 + timedelta(days=1):
+                consecutive_dates.append(date1)
+
+    if not consecutive_dates:
+        return None
+
+        # Count the occurrences of consecutive dates using Counter
+    consecutive_date_count = dict(Counter(consecutive_dates))
+    max_value = max(consecutive_date_count.values())
+
+    # Find the keys with the maximum value
+    max_keys = [key for key, value in consecutive_date_count.items() if value == max_value]
+    earliest_date = min(max_keys)
+    print("Ans:", earliest_date)
+    return earliest_date
+
+
+def get_date_counts(partner_list):
+    date_counts = {}
+    for partner in partner_list:
+        available_dates = partner.availableDates
+        for available_date in available_dates:
+            if available_date not in date_counts:
+                date_counts[available_date] = 1
+            else:
+                date_counts[available_date] += 1
+    return date_counts
+
+
 def main():
     # Check if the GET request was successful (status code 200)
     try:
-        get_data = get_response(API_URL)
-        if get_data:
-            for partner in get_data:
-                print(f"Post ID: {partner.firstName}, Title: {partner.lastName}")
+        # partner_list = get_response(API__GET_URL)
+        partner_list = get_response_sample_data()
 
-        # Define the data for the POST request
-        # post_data = {
-        #     "userId": 100,
-        #     "id": 89,
-        #     "title": "Harry Potter",
-        #     "body": "Once upon a time"
-        # }
+        country_map = separate_countries(partner_list)
+        for key, partner_list_country in country_map.items():
+            optimal_date_country = find_optimal_date_for_country(partner_list_country)
+            print(f"country: {key}, optimal_date_country: {optimal_date_country}")
+
+        # print(f"Country map spain: {country_map['Spain'][0]}")
         #
-        # # Perform the POST request
-        # post_response(API_URL, post_data)
+        # date_counts = get_date_counts(partner_list)
+        # optimal_date = find_optimal_date(date_counts)
+        # print(optimal_date)
 
     except Exception as e:
         print(f"Error: {e}")
